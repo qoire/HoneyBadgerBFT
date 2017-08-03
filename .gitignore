@@ -1,5 +1,5 @@
 # IDE junk files
-.idea/*
+.idea/
 *.pyc
 tmp*
 core/msglog*

@@ -186,7 +186,7 @@ def client_test_freenet(N, t, options):
     myID = IP_LIST.index(localIP)
     N = len(IP_LIST)
     initiateRND(options.tx)
-
+    
     def makeBroadcast(i):
         chans = []
         # First establish N connections (including a self connection)
@@ -217,23 +217,29 @@ def client_test_freenet(N, t, options):
         sdList = dict()
         tList = []
 
+        # Generate _broadcast and _send functions from makeBroadcast(i)
         def _makeBroadcast(x):
             bc, sd = makeBroadcast(x)
             bcList[x] = bc
             sdList[x] = sd
 
+        # Assign each _makeBroadcast (remember this attempts to establish connections)
+        # To each Greenlet (thread), then execute
         for i in iterList:
             tmp_t = Greenlet(_makeBroadcast, i)
             tmp_t.parent_args = (N, t)
             tmp_t.name = 'client_test_freenet._makeBroadcast(%d)' % i
             tmp_t.start()
             tList.append(tmp_t)
+
+        # wait for all connections to be established
         gevent.joinall(tList)
 
         rnd = Random()
         rnd.seed(123123)
         # This makes sure that all the EC2 instances have the same transaction pool
         transactionSet = set([encodeTransaction(randomTransaction(rnd), randomGenerator=rnd) for trC in range(int(options.tx))])  # we are using the same one
+
 
         def toBeScheduled():
             for i in iterList:
@@ -269,6 +275,7 @@ def client_test_freenet(N, t, options):
             finally:
                 print "Consensus Finished"
 
+        # seems to be scheduling a wait period before the next round
         s = sched.scheduler(time.time, time.sleep)
 
         time_now = time.time()
@@ -323,6 +330,8 @@ if __name__ == '__main__':
 
     from optparse import OptionParser
     parser = OptionParser()
+    parser.add_option("-i", "--local-ip", dest="local_ip",
+                      help="Local IP of this node, in the format of [IP]:[PORT]")
     parser.add_option("-e", "--ecdsa-keys", dest="ecdsa",
                       help="Location of ECDSA keys", metavar="KEYS")
     parser.add_option("-k", "--threshold-keys", dest="threshold_keys",
@@ -343,6 +352,7 @@ if __name__ == '__main__':
                       help="Tolerance of adversaries", metavar="T", type="int")
     parser.add_option("-x", "--transactions", dest="tx",
                       help="Number of transactions proposed by each party", metavar="TX", type="int", default=-1)
+
     (options, args) = parser.parse_args()
     prepareIPList(open(expanduser(options.hosts), 'r').read())
     if (options.ecdsa and options.threshold_keys and options.threshold_encs and options.n and options.t):

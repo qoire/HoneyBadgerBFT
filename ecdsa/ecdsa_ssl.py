@@ -19,89 +19,99 @@ def check_result (val, func, args):
     else:
         return ctypes.c_void_p (val)
 
-if platform.architecture()[0] == "64bit":
-    # BN (BigNumber) related
-    # bn/bn.h int           BN_bn2bin(const BIGNUM *a, unsigned char *to)
-    ssl.BN_bn2bin.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
-    ssl.BN_bn2bin.restype = ctypes.c_int
+# BN (BigNumber) related
+# bn/bn.h int           BN_bn2bin(const BIGNUM *a, unsigned char *to)
+ssl.BN_bn2bin.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+ssl.BN_bn2bin.restype = ctypes.c_int
 
-    # bn/bn.h BIGNUM        *BN_new(void)
-    ssl.BN_new.argtypes = []
-    ssl.BN_new.restype = ctypes.c_void_p
-    ssl.BN_new.errcheck = check_result
+# bn/bn.h BIGNUM        *BN_new(void)
+ssl.BN_new.argtypes = []
+ssl.BN_new.restype = ctypes.c_void_p
+ssl.BN_new.errcheck = check_result
 
-    # bn/bn.h BN_CTX        *BN_CTX_new(void)
-    ssl.BN_CTX_new.argtypes = []
-    ssl.BN_CTX_new.restype = ctypes.c_void_p
-    ssl.BN_new.errcheck = check_result
+# bn/bn.h BN_CTX        *BN_CTX_new(void)
+ssl.BN_CTX_new.argtypes = []
+ssl.BN_CTX_new.restype = ctypes.c_void_p
+ssl.BN_new.errcheck = check_result
 
-    # bn/bn.h void          BN_CTX_free(BN_CTX *c)
-    ssl.BN_CTX_free.argtypes = [ctypes.c_void_p]
-    # void
+# bn/bn.h void          BN_CTX_free(BN_CTX *c)
+ssl.BN_CTX_free.argtypes = [ctypes.c_void_p]
+# void
 
-    # ECKEY related
-    # bn/bn.h               EC_KEY_new_by_curve_name(const *)
-    ssl.EC_KEY_new_by_curve_name.argtypes = [ctypes.c_int]
-    ssl.EC_KEY_new_by_curve_name.restype = ctypes.c_void_p
+# ECKEY related
+# bn/bn.h               EC_KEY_new_by_curve_name(const *)
+ssl.EC_KEY_new_by_curve_name.argtypes = [ctypes.c_int]
+ssl.EC_KEY_new_by_curve_name.restype = ctypes.c_void_p
 
-    ssl.EC_KEY_get0_private_key.argtypes = [ctypes.c_void_p]
-    ssl.EC_KEY_get0_private_key.restype = ctypes.c_void_p
+ssl.EC_KEY_get0_private_key.argtypes = [ctypes.c_void_p]
+ssl.EC_KEY_get0_private_key.restype = ctypes.c_void_p
 
-    # ec/ec.h EC_GROUP      *EC_KEY_get0_group(const EC_KEY *key)
-    ssl.EC_KEY_get0_group.argtypes = [ctypes.c_void_p]
-    ssl.EC_KEY_get0_group.restype = ctypes.c_void_p
+# ec/ec.h EC_GROUP      *EC_KEY_get0_group(const EC_KEY *key)
+ssl.EC_KEY_get0_group.argtypes = [ctypes.c_void_p]
+ssl.EC_KEY_get0_group.restype = ctypes.c_void_p
 
-    # ec/ec.h EC_POINT      *EC_POINT_new(const EC_GROUP *group)
-    ssl.EC_POINT_new.argtypes = [ctypes.c_void_p]
-    ssl.EC_POINT_new.restype = ctypes.c_void_p
+# ec/ec.h EC_POINT      *EC_POINT_new(const EC_GROUP *group)
+ssl.EC_POINT_new.argtypes = [ctypes.c_void_p]
+ssl.EC_POINT_new.restype = ctypes.c_void_p
 
-    #                       EC_KEY_set_private_key
-    ssl.EC_KEY_set_private_key.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
-    ssl.EC_KEY_set_private_key.restype = ctypes.c_int
+#                       EC_KEY_set_private_key
+ssl.EC_KEY_set_private_key.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+ssl.EC_KEY_set_private_key.restype = ctypes.c_int
 
-    #                       EC_KEY_set_public_key
-    ssl.EC_KEY_set_public_key.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
-    ssl.EC_KEY_set_public_key.restype = ctypes.c_int
+#                       EC_KEY_set_public_key
+ssl.EC_KEY_set_public_key.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+ssl.EC_KEY_set_public_key.restype = ctypes.c_int
 
-    # ec/ec_lib.c void      EC_POINT_free(EC_POINT *point)
-    ssl.EC_POINT_free.argtypes = [ctypes.c_void_p]
-    # void - no return type
+# ec/ec_lib.c void      EC_POINT_free(EC_POINT *point)
+ssl.EC_POINT_free.argtypes = [ctypes.c_void_p]
+# void - no return type
 
-    #                       EC_KEY_generate_key
-    ssl.EC_KEY_generate_key.argtypes = [ctypes.c_void_p]
-    ssl.EC_KEY_generate_key.restype = ctypes.c_int
+#                       EC_KEY_generate_key
+ssl.EC_KEY_generate_key.argtypes = [ctypes.c_void_p]
+ssl.EC_KEY_generate_key.restype = ctypes.c_int
 
-    # ec/ec.h               d2i_ECPrivateKey
-    ssl.d2i_ECPrivateKey.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_long]
-    ssl.d2i_ECPrivateKey.restype = ctypes.c_void_p
+# ec/ec.h               d2i_ECPrivateKey
+ssl.d2i_ECPrivateKey.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_long]
+ssl.d2i_ECPrivateKey.restype = ctypes.c_void_p
 
 
-    # ec/ec.h EC_KEY        *o2i_ECPublicKey(EC_KEY **a, const unsigned char **in, long len)
-    ssl.o2i_ECPublicKey.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_long]
-    ssl.o2i_ECPublicKey.restype = ctypes.c_void_p
+# ec/ec.h EC_KEY        *o2i_ECPublicKey(EC_KEY **a, const unsigned char **in, long len)
+ssl.o2i_ECPublicKey.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_long]
+ssl.o2i_ECPublicKey.restype = ctypes.c_void_p
 
-    # ec/ec.h int           i2d_ECPrivateKey(EC_KEY *key, unsigned char **out)
-    ssl.i2d_ECPrivateKey.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
-    ssl.i2d_ECPrivateKey.restype = ctypes.c_int
+# ec/ec.h int           i2d_ECPrivateKey(EC_KEY *key, unsigned char **out)
+ssl.i2d_ECPrivateKey.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+ssl.i2d_ECPrivateKey.restype = ctypes.c_int
 
-    # ec/ec.h EC_KEY        *i2o_ECPublicKey(EC_KEY **key, const unsigned char **in, long len)
-    ssl.i2o_ECPublicKey.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_long]
-    ssl.i2o_ECPublicKey.restype = ctypes.c_void_p
+# ec/ec.h EC_KEY        *i2o_ECPublicKey(EC_KEY **key, const unsigned char **in, long len)
+ssl.i2o_ECPublicKey.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_long]
+ssl.i2o_ECPublicKey.restype = ctypes.c_void_p
 
-    # ecdsa/ecdsa.h int     ECDSA_size(const EC_KEY *eckey)
-    ssl.ECDSA_size.argtypes = [ctypes.c_void_p]
-    ssl.ECDSA_size.restype = ctypes.c_int
+# ecdsa/ecdsa.h int     ECDSA_size(const EC_KEY *eckey)
+ssl.ECDSA_size.argtypes = [ctypes.c_void_p]
+ssl.ECDSA_size.restype = ctypes.c_int
 
-    # ecdsa/ecdsa.h int     ECDSA_sign(int type, const unsigned char *dgst, int dgstlen,
-    #                               unsigned char *sig, unsigned int *siglen, EC_KEY *eckey))
-    ssl.ECDSA_sign.argtypes = [ctypes.c_int, ctypes.c_void_p, ctypes.c_int,
-                               ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]
-    ssl.ECDSA_sign.restype = ctypes.c_int
+# ecdsa/ecdsa.h int     ECDSA_sign(int type, const unsigned char *dgst, int dgstlen,
+#                               unsigned char *sig, unsigned int *siglen, EC_KEY *eckey))
+ssl.ECDSA_sign.argtypes = [ctypes.c_int, ctypes.c_void_p, ctypes.c_int,
+                           ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]
+ssl.ECDSA_sign.restype = ctypes.c_int
 
-    # ecdsa/ecdsa.h         ECDSA_verify(int type, const unsigned char *dgst, int dgst_len,
-    #                               const unsigned char *sigbuf, int sig_len, EC_KEY *eckey)
-    ssl.ECDSA_verify.argtypes = [ctypes.c_int, ctypes.c_void_p, ctypes.c_int,
-                                 ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p]
+# ecdsa/ecdsa.h         ECDSA_verify(int type, const unsigned char *dgst, int dgst_len,
+#                               const unsigned char *sigbuf, int sig_len, EC_KEY *eckey)
+ssl.ECDSA_verify.argtypes = [ctypes.c_int, ctypes.c_void_p, ctypes.c_int,
+                             ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p]
+ssl.ECDSA_verify.restype = ctypes.c_int
+
+# ec/ec.h                int EC_POINT_mul(const EC_GROUP *group, EC_POINT *r, const BIGNUM *n,
+#                                           const EC_POINT *q, const BIGNUM *m, BN_CTX *ctx)
+ssl.EC_POINT_mul.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+                             ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]
+ssl.EC_POINT_mul.restype = ctypes.c_int
+
+# ec/ec.h                 void EC_KEY_free(EC_KEY *key)
+ssl.EC_KEY_free.argtypes = [ctypes.c_void_p]
+# void
 
 class KEY:
 

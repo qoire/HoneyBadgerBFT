@@ -76,6 +76,10 @@ class Transaction:  # assume amout is in term of short
         return hash(self.source) ^ hash(self.target) ^ hash(self.amount)
 
 
+# Generates a random transaction, seems like definition
+# of transaction has yet to be formalized in this context, however
+# only serialization is required to be unique, we can swap for our
+# own transactions if necessary
 def randomTransaction(randomGenerator=random):
     tx = Transaction()
     tx.source = randomGenerator.choice(nameList)

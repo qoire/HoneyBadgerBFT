@@ -30,6 +30,12 @@ from ..commoncoin.boldyreva_gipc import initialize as initializeGIPC
 TOR_SOCKSPORT = range(9050, 9150)
 WAITING_SETUP_TIME_IN_SEC = 3
 
+# Variables added post-fork
+
+# Represents the IP of the current (local) node, instead of attempting
+# To confirm it from pinging amazon
+LOCAL_IP = None
+
 def goodread(f, length):
     ltmp = length
     buf = []
@@ -98,11 +104,12 @@ IP_LIST = None
 IP_MAPPINGS = None
 
 
+# Modified to run locally, (ports have to change)
 def prepareIPList(content):
     global IP_LIST, IP_MAPPINGS
     IP_LIST = content.strip().split('\n')  # getAddrFromEC2Summary(content)
-    IP_MAPPINGS = [(host, BASE_PORT) for host in IP_LIST if host]
-    #print IP_LIST
+    IP_PORT_LIST = [(sp.split(':')[0], sp.split(':')[1]) for sp in IP_LIST if sp]
+    IP_MAPPINGS = [(host[0], host[1]) for host in IP_PORT_LIST if host]
 
 mylog("[INIT] IP_MAPPINGS: %s" % repr(IP_MAPPINGS))
 
@@ -155,6 +162,11 @@ def decode(s):  # TODO
         logChannel.put((result[0], msgSize[result[0]], msgFrom[result[0]], msgTo[result[0]], -1, ending_time[result[0]], 'o'+repr(result[1])))
     return result[1]
 
+
+def localIp(ip_str):
+    ip_l = ip_str.strip().split(":")
+    return (ip_l[0], ip_l[1])
+
 def client_test_freenet(N, t, options):
     '''
     Test for the client with random delay channels
@@ -181,8 +193,11 @@ def client_test_freenet(N, t, options):
     logGreenlet.name = 'client_test_freenet.logWriter'
     logGreenlet.start()
 
+    # generate the local ip
+    LOCAL_IP = localIp(options.ip)
+
     # query amazon meta-data
-    localIP = check_output(['curl', 'http://169.254.169.254/latest/meta-data/public-ipv4'])
+    localIP = LOCAL_IP
     myID = IP_LIST.index(localIP)
     N = len(IP_LIST)
     initiateRND(options.tx)
@@ -213,7 +228,11 @@ def client_test_freenet(N, t, options):
         initBeforeBinaryConsensus()
         ts = []
         controlChannels = [Queue() for _ in range(N)]
+
+        # broadcast
         bcList = dict()
+
+        # send
         sdList = dict()
         tList = []
 
@@ -237,10 +256,12 @@ def client_test_freenet(N, t, options):
 
         rnd = Random()
         rnd.seed(123123)
+
         # This makes sure that all the EC2 instances have the same transaction pool
         transactionSet = set([encodeTransaction(randomTransaction(rnd), randomGenerator=rnd) for trC in range(int(options.tx))])  # we are using the same one
 
-
+        # this function is run after we have verified that all the necessary nodes
+        # are connected
         def toBeScheduled():
             for i in iterList:
                 bc = bcList[i]  # makeBroadcast(i)
@@ -249,6 +270,10 @@ def client_test_freenet(N, t, options):
                 th = Greenlet(honestParty, i, N, t, controlChannels[i], bc, recv, sd, options.B)
                 th.parent_args = (N, t)
                 th.name = 'client_test_freenet.honestParty(%d)' % i
+
+                # from the perspective of local node, this would mean each control
+                # channel is sending it the same thing (transactionSet)
+                # emulates a client broadcasting a transaction to the network?
                 controlChannels[i].put(('IncludeTransaction',
                     transactionSet))
                 th.start()
@@ -275,11 +300,15 @@ def client_test_freenet(N, t, options):
             finally:
                 print "Consensus Finished"
 
+        # at each scheduled time interval
         # seems to be scheduling a wait period before the next round
+        # in this case timefunc = time.time, delayfunc = time.sleep
         s = sched.scheduler(time.time, time.sleep)
 
         time_now = time.time()
         delay = options.delaytime - time_now
+
+        # here we're just saying that the delay should be set for time.time() + delay
         s.enter(delay, 1, toBeScheduled, ())
         print myID, "waits for", time_now + delay, 'now is', time_now
         s.run()
@@ -320,8 +349,10 @@ def exit():
         stats = GreenletProfiler.get_func_stats()
         stats.print_all()
         stats.save('profile.callgrind', type='callgrind')
+import sys
 
-if __name__ == '__main__':
+def main():
+    print(sys.argv)
     # GreenletProfiler.set_clock_type('cpu')
     atexit.register(exit)
     if USE_PROFILE:
@@ -339,7 +370,7 @@ if __name__ == '__main__':
     parser.add_option("-c", "--threshold-enc", dest="threshold_encs",
                       help="Location of threshold encryption keys", metavar="KEYS")
     parser.add_option("-s", "--hosts", dest="hosts",
-                      help="Host list file", metavar="HOSTS", default="~/hosts")
+                      help="Host list file", metavar="HOSTS", default="./hosts")
     parser.add_option("-n", "--number", dest="n",
                       help="Number of parties", metavar="N", type="int")
     parser.add_option("-p", "--tx-path", dest="txpath",
@@ -363,4 +394,7 @@ if __name__ == '__main__':
         client_test_freenet(options.n , options.t, options)
     else:
         parser.error('Please specify the arguments')
+
+if __name__ == '__main__':
+    main()
 

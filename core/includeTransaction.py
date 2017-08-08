@@ -50,6 +50,10 @@ def coolSHA256Hash(x):
     if isinstance(x, int): x = str(x)
     return hashlib.sha256(x).digest()
 
+# Represents the reliable broadcast algorithm in the paper
+# implements protocols seen on Figure 2. As a personal note,
+# ECDSA keys are utilized here for purposes of identifying and checking
+# the validity of the messages being passed
 @greenletFunction
 def multiSigBr(pid, N, t, msg, broadcast, receive, outputs, send):
     # Since all the parties we have are symmetric, so I implement this function for N instances of A-cast as a whole
@@ -103,6 +107,7 @@ def multiSigBr(pid, N, t, msg, broadcast, receive, outputs, send):
         reconstDone = [False] * N
         while True:  # main loop
             sender, msgBundle = receive()
+            # represents the case recv(VAL(h, b_j, s_j)) from P_sender (proposer of their block)
             if msgBundle[0] == 'i' and not signed[sender]:
                 if keys[sender].verify(sha1hash(''.join([msgBundle[1][0], msgBundle[1][1], ''.join(msgBundle[1][2])])), msgBundle[2]):
                     assert isinstance(msgBundle[1], tuple)
@@ -121,6 +126,7 @@ def multiSigBr(pid, N, t, msg, broadcast, receive, outputs, send):
                     signed[sender] = True
                 else:
                     raise ECDSASignatureError()
+            # represents the case recv(ECHO(h, b_j, s_j)) from P_j (another peer)
             elif msgBundle[0] == 'e':
                 if keys[sender].verify(sha1hash(''.join([str(msgBundle[1][0]), msgBundle[1][1], msgBundle[1][2], ''.join(msgBundle[1][3])])), msgBundle[2]):
                     originBundle = msgBundle[1]
@@ -132,18 +138,22 @@ def multiSigBr(pid, N, t, msg, broadcast, receive, outputs, send):
                             sys.exit(0)
                     else:
                         rootHashes[originBundle[0]] = originBundle[2]
+                    # grab the "opinion" on the message from the peer, place into opinions list
                     opinions[originBundle[0]][sender] = originBundle[1]   # We are going to move this part to kekeketktktktk
                     if len(opinions[originBundle[0]]) >= Threshold2 and not readySent[originBundle[0]]:
                             readySent[originBundle[0]] = True
                             broadcast(('r', originBundle[0], originBundle[2]))  # We are broadcasting its hash
                 else:
                     raise ECDSASignatureError()
+            # represents the case recv(READY(h))
             elif msgBundle[0] == 'r':
                 readyCounter[msgBundle[1]][msgBundle[2]] += 1
                 tmp = readyCounter[msgBundle[1]][msgBundle[2]]
+                # represents the case f + 1 matching READY(h) messages received
                 if tmp >= t+1 and not readySent[msgBundle[1]]:
                     readySent[msgBundle[1]] = True
                     broadcast(('r', msgBundle[1], msgBundle[2]))
+                # represents the case 2f + 1 matching READY(h) messages received
                 if tmp >= Threshold2 and not outputs[msgBundle[1]].full() and \
                         not reconstDone[msgBundle[1]] and len(opinions[msgBundle[1]]) >= Threshold:
                     reconstDone[msgBundle[1]] = True
@@ -153,6 +163,8 @@ def multiSigBr(pid, N, t, msg, broadcast, receive, outputs, send):
                             sys.exit(0)
                     else:
                         rootHashes[msgBundle[1]] = msgBundle[2]
+
+                    # represents the case where we see READY(h) 2f + 1, but we dont have the opinions
                     if opinions[msgBundle[1]].values()[0] == '':
                         reconstruction = ['']
                     else:
@@ -277,7 +289,11 @@ def honestParty(pid, N, t, controlChannel, broadcast, receive, send, B = -1):
     proposals = []
     receivedProposals = False
     commonSet = []
+
+    # generates a dictionary that creates a queue for each key
     locks = defaultdict(lambda : Queue(1))
+
+    # generates a dictionary that defaults to the value "false"
     doneCombination = defaultdict(lambda : False)
     ENC_THRESHOLD = N - 2 * t
     global finishcount
@@ -320,15 +336,18 @@ def honestParty(pid, N, t, controlChannel, broadcast, receive, send, B = -1):
             elif op == "Msg":
                 broadcast(eval(msg))  # now the msg is something we mannually send
             mylog("timestampB (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
+
             if len(transactionCache) < B:  # Let's wait for many transactions. : )
                 time.sleep(0.5)
                 print "Not enough transactions", len(transactionCache)
                 continue
 
+            # randomly selects the oldest transactions (randomly)
+            # TODO: how does this fit with our model
             oldest_B = transactionCache[:B]
             selected_B = random.sample(oldest_B, min(B/N, len(oldest_B)))
             print "[%d] proposing %d transactions" % (pid, min(B/N, len(oldest_B)))
-            aesKey = random._urandom(32)  #
+            aesKey = random._urandom(32)
             encrypted_B = encrypt(aesKey, ''.join(selected_B))
             encryptedAESKey = encPK.encrypt(aesKey)
             proposal = serializeEnc(encryptedAESKey) + encrypted_B
@@ -336,6 +355,7 @@ def honestParty(pid, N, t, controlChannel, broadcast, receive, send, B = -1):
             commonSet, proposals = includeTransaction(pid, N, t, proposal, broadcast, includeTransactionChannel.get, send)
             mylog("timestampIE (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
             receivedProposals = True
+
             for i in range(N):
                 probe(i)
             for i, c in enumerate(commonSet):  # stx is the same for every party
@@ -344,12 +364,14 @@ def honestParty(pid, N, t, controlChannel, broadcast, receive, send, B = -1):
                     broadcast(('O', i, share))
             mylog("timestampIE2 (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
             recoveredSyncedTxList = []
+
             def prepareTx(i):
                 rec = locks[i].get()
                 encodedTxSet = decrypt(rec, proposals[i][ENC_SERIALIZED_LENGTH:])
                 assert len(encodedTxSet) % TR_SIZE == 0
                 recoveredSyncedTx = [encodedTxSet[i:i+TR_SIZE] for i in range(0, len(encodedTxSet), TR_SIZE)]
                 recoveredSyncedTxList.append(recoveredSyncedTx)
+
             thList = []
             for i, c in enumerate(commonSet):  # stx is the same for every party
                 if c:

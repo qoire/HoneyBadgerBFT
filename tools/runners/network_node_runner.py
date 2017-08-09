@@ -11,8 +11,7 @@ sys.path.append(os.path.abspath(os.path.curdir))
 
 def main():
     proc = MsgProcessor()
+    proc.run()
 
 if __name__ == '__main__':
-    print
-    print(sys.argv)
     main()

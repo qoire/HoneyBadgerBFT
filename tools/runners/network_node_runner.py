@@ -2,14 +2,15 @@
 # Lets us get around PyCharms limitations around pythons module system
 import sys
 import os
+from MsgProcessor import MsgProcessor
 
 sys.path.append(os.path.abspath("HoneyBadgerBFT"))
 sys.path.append(os.path.abspath(os.path.curdir))
 
-import HoneyBadgerBFT.test.network_node_test
+#import HoneyBadgerBFT.test.network_node_test
 
 def main():
-    HoneyBadgerBFT.test.network_node_test.main()
+    proc = MsgProcessor()
 
 if __name__ == '__main__':
     print

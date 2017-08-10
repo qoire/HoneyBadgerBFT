@@ -29,8 +29,8 @@ class MsgProcessor():
     1) The other party sets up server first, then calls us (launches)
     2) We set up our server, then connect to their server, and send the message:
         {
-            msg_type: CONNECT
-            host: 127.0.0.1
+            @type: connect
+            host: '127.0.0.1'
             port: 30303 (or something like that)
         }
 
@@ -39,7 +39,7 @@ class MsgProcessor():
     SERVER_SIDE:
     Messages should be in the following format:
         {
-            msg_type: TX (so far only transaction messages supported),
+            @type: tx_msg (so far only transaction messages supported),
             msg_contents: TX_BODY
         }
 
@@ -49,13 +49,8 @@ class MsgProcessor():
     CLIENT_SIDE:
     At an undetermined future point in time, the we should respond with:
         {
-            msg_type: BLK,
-            msg_contents: BLK_BODY
-        }
-
-    where BLK_BODY, is a very simplified block (no state validation or anything):
-        {
-            txs: [TX_HASH_LIST]
+            @type: blk_msg,
+            msg_contents: [tx_hash, ...]
         }
     '''
     MSG_SIZE = 4096
@@ -116,7 +111,7 @@ class MsgProcessor():
 
         # now all connections are established, run the routines
         print("MsgProcessor: connection, established, sending counterparty information")
-        client_sock.send(json.dumps({'msg_type': 'CONNECT', 'ip': 'localhost', 'port': 30303}))
+        client_sock.send(json.dumps({'@type': 'connect_msg', 'host': '127.0.0.1', 'port': 30303}))
 
         self.server_t = Greenlet(self._client)
         self.client_t = Greenlet(self._server)
@@ -179,7 +174,7 @@ class MsgProcessor():
     def send_block(self, tx_list, binary=False):
         if binary:
             tx_list = [a.encode('hex_codec') for a in tx_list]
-        self.q.put(json.dumps({'msg_type': 'BLK', 'tx_list': tx_list}))
+        self.q.put(json.dumps({'@type': 'blk_msg', 'tx_list': tx_list}))
 
     def stop(self):
         self.server_shutdown = True

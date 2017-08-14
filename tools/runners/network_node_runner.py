@@ -14,7 +14,7 @@ import time
 def main():
     proc = MsgProcessor()
     proc.run()
-    time.sleep(100000000)
+
 
 if __name__ == '__main__':
     main()

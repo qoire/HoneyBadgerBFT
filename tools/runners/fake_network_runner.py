@@ -1,6 +1,10 @@
 # Initializes a fake network runner
 # Similar to test_honeybadger.py
 # Emulates randomly varying channels
+import sys
+import os
+sys.path.append(os.path.abspath("../../"))
+
 
 from MsgProcessor import MsgProcessor
 import random
@@ -42,7 +46,7 @@ def simple_router(N, maxdelay=0.005, seed=None):
         def _send(j, o):
             delay = rnd.random() * maxdelay
             # delay = 0.1
-            print 'SEND   %8s [%2d -> %2d] %2.1f' % (o[0], i, j, delay*1000), o[1:]
+            # print 'SEND   %8s [%2d -> %2d] %2.1f' % (o[0], i, j, delay*1000), o[1:]
             gevent.spawn_later(delay, queues[j].put_nowait, (i, o))
 
         return _send
@@ -98,19 +102,26 @@ def _hookup_msg_processor(proc, b):
 
 def setup_network(n):
     # deal threshold signatures
-    sPK, sSKs = dealer(4, 2) # n, f+1
-    ePK, eSKs = tpke.dealer(4, 2)
-    t, b = _setup_badgers(4, 2, 0)
+    t, b = _setup_badgers(4, 1, 0)
     proc = MsgProcessor()
     _hookup_msg_processor(proc, b)
     proc.run()
+
+    # TODO: untested
+    def sd():
+        def _sd():
+            gevent.killall(t)
+            proc.stop()
+            print("shutdown complete")
+        gevent.spawn(_sd).start()
+
+    proc.hookup_shutdown(sd)
 
     try:
         proc.block()
     except KeyboardInterrupt:
         gevent.killall(t)
         proc.stop()
-        raise
 
 
 def main():

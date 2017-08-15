@@ -68,8 +68,8 @@ class MsgProcessor():
         self.client_t = None
 
         self.out = None
-
         self.t = None
+        self.shutdown_fn = None
 
 
     def run(self):
@@ -160,7 +160,7 @@ class MsgProcessor():
         print ("MsgProcessor: server (kernel -> us) subroutine active")
 
         while not self.server_shutdown:
-            msg = server.get()
+            msg = server.recv()
             obj = json.loads(msg)
 
             if (obj['msg_type'] == 'DISCONNECT'):
@@ -183,6 +183,14 @@ class MsgProcessor():
         """
         self.out = out
 
+    def hookup_shutdown(self, shutdown_fn):
+        """
+        This function is called when the program should be shutdown, triggered
+        by the DISCONNECT message
+        :param shutdown:
+        :return:
+        """
+        self.shutdown_fn = shutdown_fn
 
     def send_block(self, tx_list, binary=False):
         if binary:
@@ -197,7 +205,8 @@ class MsgProcessor():
         self.server_shutdown = True
         self.client_shutdown = True
 
-        gevent.joinall([self.server_t, self.client_t])
+        # killall for now, since we cant ruin the state from MsgProcessor anyways
+        gevent.killall([self.server_t, self.client_t])
 
         if self.server_sock != None:
             self.server_sock.close()
@@ -205,5 +214,7 @@ class MsgProcessor():
         if self.client_sock != None:
             self.client_sock.close()
 
-        if self.context != None:
-            self.context.term()
+        #if self.context != None:
+        #    self.context.term()
+
+        print("msgproc shutdown")

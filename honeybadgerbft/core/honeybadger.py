@@ -8,13 +8,26 @@ from honeybadgerbft.core.commonsubset import commonsubset
 from honeybadgerbft.core.honeybadger_block import honeybadger_block
 from honeybadgerbft.crypto.threshenc import tpke
 
-import pdb
-
-
-
 class HoneyBadgerBFT():
 
-    def __init__(self, sid, pid, B, N, f, sPK, sSK, ePK, eSK, send, recv):
+    def __init__(self, sid, pid, B, N, f, sPK, sSK, ePK, eSK, send, recv, ob, run_forever = False):
+        """
+        Initializes the HoneyBadgerBFT class, technically this class takes input transactions
+        and returns blocks, in our case blocks are returned through the ob function
+        :param sid: session id
+        :param pid: process id (has correlation with the parameter index of tpke)
+        :param B:
+        :param N:
+        :param f:
+        :param sPK: signature public key (boldyreva)
+        :param sSK: signature secret key (boldyreva)
+        :param ePK: encryption public key (tpke)
+        :param eSK: encryption secret key (tpke)
+        :param send: function to send a message to an external actor
+        :param recv: function to receive a message from external actor
+        :param ob: unary function that takes a transaction (hash) as input
+        :param run_forever: a boolean parameter specifying whether to run forever
+        """
         self.sid = sid
         self.pid = pid
         self.B = B
@@ -26,6 +39,10 @@ class HoneyBadgerBFT():
         self.eSK = eSK
         self._send = send
         self._recv = recv
+        self.run_forever = run_forever
+
+        # ob is a function that passes the block to an outbound
+        self.ob = ob
 
         self.round = 0  # Current block number
         self.transaction_buffer = []
@@ -82,16 +99,19 @@ class HoneyBadgerBFT():
                 tx = tx_to_send[0]
 
             if tx == None:
-                tx = "<EMPTY>"
+                tx = "00"
 
             new_tx = self._run_round(r, tx, send_r, recv_r)
             print 'pid:', self.pid, ' new_tx:', new_tx
+            self.ob(new_tx)
 
             # Remove all of the new transactions from the buffer
             self.transaction_buffer = [_tx for _tx in self.transaction_buffer if _tx not in new_tx]
 
             self.round += 1 # Increment the round
-            if self.round >= 3: break # Only run one round for now
+
+            if not self.run_forever:
+                if self.round >= 3: break # Only run one round for now
 
 
     def _run_round(self, r, tx_to_send, send, recv):

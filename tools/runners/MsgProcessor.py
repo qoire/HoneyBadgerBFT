@@ -1,11 +1,11 @@
 import gevent
 import json
-import zmq
+import zmq.green as zmq
 import base64
 from Queue import Queue
 from gevent import Greenlet
-
-
+from gevent import monkey
+monkey.patch_all()
 
 class PoisonPill:
     '''
@@ -13,7 +13,6 @@ class PoisonPill:
     '''
     def __init__(self):
         pass
-
 
 class MsgProcessor():
     '''
@@ -70,12 +69,17 @@ class MsgProcessor():
 
         self.out = None
 
+        self.t = None
+
 
     def run(self):
         '''
         Runs the message processor, no lightweight threads are started until this point
         '''
-        Greenlet(self._run()).start()
+        if self.t != None:
+            return
+
+        self.t = Greenlet(self._run).start()
 
 
     def _run(self):
@@ -88,7 +92,7 @@ class MsgProcessor():
             print("MsgProcessor: server running")
             socket = self.context.socket(zmq.PAIR)
             socket.bind("tcp://127.0.0.1:%s" % self.serv_conn[1])
-            print("MsgProcessor: server -> bound")
+            print("MsgProcessor: server -> bound to tcp://127.0.0.1:{}".format(self.serv_conn[1]))
             return socket
 
         def _client():
@@ -98,12 +102,9 @@ class MsgProcessor():
             print("MsgProcessor: client -> connection established")
             return socket
 
-        g_s = Greenlet(_server)
-        g_c = Greenlet(_client)
 
-        g_s.start()
-        g_c.start()
-
+        g_s = Greenlet.spawn(_server)
+        g_c = Greenlet.spawn(_client)
         ret = gevent.joinall([g_s, g_c])
         client_sock = ret[1].value
 
@@ -187,6 +188,10 @@ class MsgProcessor():
         if binary:
             tx_list = [a.encode('hex_codec') for a in tx_list]
         self.q.put(json.dumps({'@type': 'blk_msg', 'tx_list': tx_list}))
+
+    def block(self):
+        # block, dirty, used to block the main thread
+        gevent.joinall(self.t)
 
     def stop(self):
         self.server_shutdown = True

@@ -9,6 +9,7 @@ import gevent
 from honeybadgerbft.crypto.threshsig.boldyreva import dealer
 from honeybadgerbft.crypto.threshenc import tpke
 from honeybadgerbft.core.honeybadger import HoneyBadgerBFT
+import signal
 
 def tx_input_router(badgers):
     """
@@ -41,7 +42,7 @@ def simple_router(N, maxdelay=0.005, seed=None):
         def _send(j, o):
             delay = rnd.random() * maxdelay
             # delay = 0.1
-            # print 'SEND   %8s [%2d -> %2d] %2.1f' % (o[0], i, j, delay*1000), o[1:]
+            print 'SEND   %8s [%2d -> %2d] %2.1f' % (o[0], i, j, delay*1000), o[1:]
             gevent.spawn_later(delay, queues[j].put_nowait, (i, o))
 
         return _send
@@ -67,16 +68,21 @@ def _setup_badgers(N=4, f=1, seed=None):
     rnd = random.Random(seed)
     # print 'SEED:', seed
     router_seed = rnd.random()
-    sends, recvs = simple_router(N, seed=router_seed)
+    sends, recvs = simple_router(N, 0)
+
+    # block output router, routes output blocks
+    # TODO: complete when integrating with connecting network
+    def route_to_msgproc(tx):
+        pass
+
 
     badgers = [None] * N
     threads = [None] * N
     for i in range(N):
         badgers[i] = HoneyBadgerBFT(sid, i, 1, N, f,
                                     sPK, sSKs[i], ePK, eSKs[i],
-                                    sends[i], recvs[i])
+                                    sends[i], recvs[i], route_to_msgproc, True)
         threads[i] = gevent.spawn(badgers[i].run)
-
     return threads, badgers
 
 
@@ -97,9 +103,10 @@ def setup_network(n):
     t, b = _setup_badgers(4, 2, 0)
     proc = MsgProcessor()
     _hookup_msg_processor(proc, b)
+    proc.run()
 
     try:
-        pass
+        proc.block()
     except KeyboardInterrupt:
         gevent.killall(t)
         proc.stop()

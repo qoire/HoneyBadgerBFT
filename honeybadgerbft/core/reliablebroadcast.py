@@ -244,4 +244,5 @@ def reliablebroadcast(sid, pid, N, f, leader, input, receive, send):
                 broadcast(('READY', roothash))
 
             if len(ready[roothash]) >= OutputThreshold and echoCounter[roothash] >= K:
+                # returns here
                 return decode_output(roothash)

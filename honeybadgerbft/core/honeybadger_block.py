@@ -43,13 +43,14 @@ def honeybadger_block(pid, N, f, PK, SK, propose_in, acs_in, acs_out, tpke_bcast
     # Threshold encrypt 
     # TODO: check that propose_in is the correct length, not too large
     prop = propose_in()
-    key = os.urandom(32) # random 256-bit key
-    ciphertext = tpke.encrypt(key, prop)
-    tkey = PK.encrypt(key)
+    if not prop == None:
+        key = os.urandom(32) # random 256-bit key
+        ciphertext = tpke.encrypt(key, prop)
+        tkey = PK.encrypt(key)
 
-    import cPickle as pickle
-    to_acs = pickle.dumps( (serialize_UVW(tkey), ciphertext) )
-    acs_in( to_acs )
+        import cPickle as pickle
+        to_acs = pickle.dumps( (serialize_UVW(tkey), ciphertext) )
+        acs_in( to_acs )
 
     # Wait for the corresponding ACS to finish
     vall = acs_out()

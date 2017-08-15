@@ -8,6 +8,10 @@ from honeybadgerbft.core.commonsubset import commonsubset
 from honeybadgerbft.core.honeybadger_block import honeybadger_block
 from honeybadgerbft.crypto.threshenc import tpke
 
+import pdb
+
+
+
 class HoneyBadgerBFT():
 
     def __init__(self, sid, pid, B, N, f, sPK, sSK, ePK, eSK, send, recv):
@@ -26,6 +30,7 @@ class HoneyBadgerBFT():
         self.round = 0  # Current block number
         self.transaction_buffer = []
         self._per_round_recv = {}  # Buffer of incoming messages
+        print("initialized Badger with pid {}".format(self.pid))
 
 
     def submit_tx(self, tx):
@@ -71,8 +76,16 @@ class HoneyBadgerBFT():
                 return _send
             send_r = _make_send(r)
             recv_r = self._per_round_recv[r].get
-            new_tx = self._run_round(r, tx_to_send[0], send_r, recv_r)
-            print 'new_tx:', new_tx
+
+            tx = None
+            if len(tx_to_send) > 0:
+                tx = tx_to_send[0]
+
+            if tx == None:
+                tx = "<EMPTY>"
+
+            new_tx = self._run_round(r, tx, send_r, recv_r)
+            print 'pid:', self.pid, ' new_tx:', new_tx
 
             # Remove all of the new transactions from the buffer
             self.transaction_buffer = [_tx for _tx in self.transaction_buffer if _tx not in new_tx]

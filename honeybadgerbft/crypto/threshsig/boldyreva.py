@@ -30,10 +30,13 @@ def deserialize2(g):
     # Only work in G1 here 
     return group.deserialize('2:'+encodestring(g))
 
+rand_g1 = group.random(G1)
+rand_g2 = group.random(G2)
+
 g1 = group.hash('geng1', G1)
 g1.initPP()
 #g2 = g1
-g2 = group.hash('geng2', G2)
+g2 = group.hash('geng1', G2)
 g2.initPP()
 ZERO = group.random(ZR, seed=59)*0
 ONE = group.random(ZR, seed=60)*0+1
@@ -125,6 +128,10 @@ def dealer(players=10, k=5, seed=None):
     # Shares of master secret key
     SKs = [f(i) for i in range(1, players+1)]
     assert f(0) == secret
+
+    zg = group.hash('geng0', ZR)
+    g = g2
+    other_g = g1
 
     # Verification keys
     VK = g2 ** secret

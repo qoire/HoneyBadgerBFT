@@ -31,7 +31,7 @@ def simple_router(N, maxdelay=0.005, seed=None):
     def makeRecv(j):
         def _recv():
             (i,o) = queues[j].get()
-            #print 'RECV %8s [%2d -> %2d]' % (o[0], i, j)
+            # print 'RECV %8s [%2d -> %2d]' % (o[0], i, j)
             return (i,o)
         return _recv
         
@@ -39,18 +39,26 @@ def simple_router(N, maxdelay=0.005, seed=None):
             [makeRecv(j) for j in range(N)])
 
 
-### Test asynchronous common subset
-def _test_honeybadger(N=4, f=1, seed=None):
+def _setup_badgers(N=4, f=1, seed=None):
+    """
+    Setups up badgers in a fake network with queue based network.
+    Also, new keys are generated time the network is booted up, but
+    the ecdsa key should remain constant
+    :param N:
+    :param f:
+    :param seed:
+    :return:
+    """
     sid = 'sidA'
     # Generate threshold sig keys
-    sPK, sSKs = dealer(N, f+1, seed=seed)
+    sPK, sSKs = dealer(N, f + 1, seed=seed)
     # Generate threshold enc keys
-    ePK, eSKs = tpke.dealer(N, f+1)
-    
+    ePK, eSKs = tpke.dealer(N, f + 1)
+
     rnd = random.Random(seed)
-    #print 'SEED:', seed
+    # print 'SEED:', seed
     router_seed = rnd.random()
-    sends, recvs = simple_router(N, seed=router_seed)
+    sends, recvs = simple_router(N, maxdelay= 0, seed=router_seed)
 
     badgers = [None] * N
     threads = [None] * N
@@ -59,6 +67,13 @@ def _test_honeybadger(N=4, f=1, seed=None):
                                     sPK, sSKs[i], ePK, eSKs[i],
                                     sends[i], recvs[i])
         threads[i] = gevent.spawn(badgers[i].run)
+
+    return threads, badgers
+
+
+### Test asynchronous common subset
+def _test_honeybadger(N=4, f=1, seed=None):
+    threads, badgers = _setup_badgers(N, f)
 
     for i in range(N):
         #if i == 1: continue
@@ -84,8 +99,57 @@ def _test_honeybadger(N=4, f=1, seed=None):
         gevent.killall(threads)
         raise
 
+def _test_honeybadger_single_tx(N=4, f=1, seed=None):
+    threads, badgers = _setup_badgers(N, f)
+    badgers[0].submit_tx('<HBBFT Input 0>')
+    badgers[0].submit_tx('<HBBFT Input 1>')
+    badgers[0].submit_tx('<HBBFT Input 2>')
+
+    try:
+        outs = [threads[i].get() for i in range(N)]
+
+        # Consistency check
+        assert len(set(outs)) == 1
+
+    except KeyboardInterrupt:
+        gevent.killall(threads)
+        raise
+
+def _test_honeybadger_no_tx(N=4, f=1, seed=None):
+    threads, badgers = _setup_badgers(N, f)
+
+    try:
+        outs = [threads[i].get() for i in range(N)]
+
+        # Consistency check
+        assert len(set(outs)) == 1
+
+    except KeyboardInterrupt:
+        gevent.killall(threads)
+        raise
+
+def _test_honeybadger_no_fault(N=4, f=1, seed=None):
+    threads, badgers = _setup_badgers(N, f)
+    try:
+        outs = [threads[i].get() for i in range(N)]
+
+        # Consistency check
+        assert len(set(outs)) == 1
+
+    except KeyboardInterrupt:
+        gevent.killall(threads)
+        raise
+
+
 from nose2.tools import params
 
 def test_honeybadger():
-    _test_honeybadger()
+    # _test_honeybadger()
+    # _test_honeybadger_single_tx()
+    # _test_honeybadger_no_tx()
+    _test_honeybadger_no_fault()
+
+# if we want to run it in pycharm instead
+if __name__ == '__main__':
+    test_honeybadger()
 

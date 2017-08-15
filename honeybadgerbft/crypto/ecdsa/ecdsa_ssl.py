@@ -5,6 +5,7 @@
 
 import ctypes
 import ctypes.util
+import platform
 
 ssl = ctypes.cdll.LoadLibrary (ctypes.util.find_library ('ssl') or 'libeay32')
 
@@ -18,8 +19,99 @@ def check_result (val, func, args):
     else:
         return ctypes.c_void_p (val)
 
+# BN (BigNumber) related
+# bn/bn.h int           BN_bn2bin(const BIGNUM *a, unsigned char *to)
+ssl.BN_bn2bin.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+ssl.BN_bn2bin.restype = ctypes.c_int
+
+# bn/bn.h BIGNUM        *BN_new(void)
+ssl.BN_new.argtypes = []
+ssl.BN_new.restype = ctypes.c_void_p
+ssl.BN_new.errcheck = check_result
+
+# bn/bn.h BN_CTX        *BN_CTX_new(void)
+ssl.BN_CTX_new.argtypes = []
+ssl.BN_CTX_new.restype = ctypes.c_void_p
+ssl.BN_new.errcheck = check_result
+
+# bn/bn.h void          BN_CTX_free(BN_CTX *c)
+ssl.BN_CTX_free.argtypes = [ctypes.c_void_p]
+# void
+
+# ECKEY related
+# bn/bn.h               EC_KEY_new_by_curve_name(const *)
+ssl.EC_KEY_new_by_curve_name.argtypes = [ctypes.c_int]
 ssl.EC_KEY_new_by_curve_name.restype = ctypes.c_void_p
-ssl.EC_KEY_new_by_curve_name.errcheck = check_result
+
+ssl.EC_KEY_get0_private_key.argtypes = [ctypes.c_void_p]
+ssl.EC_KEY_get0_private_key.restype = ctypes.c_void_p
+
+# ec/ec.h EC_GROUP      *EC_KEY_get0_group(const EC_KEY *key)
+ssl.EC_KEY_get0_group.argtypes = [ctypes.c_void_p]
+ssl.EC_KEY_get0_group.restype = ctypes.c_void_p
+
+# ec/ec.h EC_POINT      *EC_POINT_new(const EC_GROUP *group)
+ssl.EC_POINT_new.argtypes = [ctypes.c_void_p]
+ssl.EC_POINT_new.restype = ctypes.c_void_p
+
+#                       EC_KEY_set_private_key
+ssl.EC_KEY_set_private_key.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+ssl.EC_KEY_set_private_key.restype = ctypes.c_int
+
+#                       EC_KEY_set_public_key
+ssl.EC_KEY_set_public_key.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+ssl.EC_KEY_set_public_key.restype = ctypes.c_int
+
+# ec/ec_lib.c void      EC_POINT_free(EC_POINT *point)
+ssl.EC_POINT_free.argtypes = [ctypes.c_void_p]
+# void - no return type
+
+#                       EC_KEY_generate_key
+ssl.EC_KEY_generate_key.argtypes = [ctypes.c_void_p]
+ssl.EC_KEY_generate_key.restype = ctypes.c_int
+
+# ec/ec.h               d2i_ECPrivateKey
+ssl.d2i_ECPrivateKey.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_long]
+ssl.d2i_ECPrivateKey.restype = ctypes.c_void_p
+
+
+# ec/ec.h EC_KEY        *o2i_ECPublicKey(EC_KEY **a, const unsigned char **in, long len)
+ssl.o2i_ECPublicKey.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_long]
+ssl.o2i_ECPublicKey.restype = ctypes.c_void_p
+
+# ec/ec.h int           i2d_ECPrivateKey(EC_KEY *key, unsigned char **out)
+ssl.i2d_ECPrivateKey.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+ssl.i2d_ECPrivateKey.restype = ctypes.c_int
+
+# ec/ec.h EC_KEY        *i2o_ECPublicKey(EC_KEY **key, const unsigned char **in, long len)
+ssl.i2o_ECPublicKey.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_long]
+ssl.i2o_ECPublicKey.restype = ctypes.c_void_p
+
+# ecdsa/ecdsa.h int     ECDSA_size(const EC_KEY *eckey)
+ssl.ECDSA_size.argtypes = [ctypes.c_void_p]
+ssl.ECDSA_size.restype = ctypes.c_int
+
+# ecdsa/ecdsa.h int     ECDSA_sign(int type, const unsigned char *dgst, int dgstlen,
+#                               unsigned char *sig, unsigned int *siglen, EC_KEY *eckey))
+ssl.ECDSA_sign.argtypes = [ctypes.c_int, ctypes.c_void_p, ctypes.c_int,
+                           ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]
+ssl.ECDSA_sign.restype = ctypes.c_int
+
+# ecdsa/ecdsa.h         ECDSA_verify(int type, const unsigned char *dgst, int dgst_len,
+#                               const unsigned char *sigbuf, int sig_len, EC_KEY *eckey)
+ssl.ECDSA_verify.argtypes = [ctypes.c_int, ctypes.c_void_p, ctypes.c_int,
+                             ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p]
+ssl.ECDSA_verify.restype = ctypes.c_int
+
+# ec/ec.h                int EC_POINT_mul(const EC_GROUP *group, EC_POINT *r, const BIGNUM *n,
+#                                           const EC_POINT *q, const BIGNUM *m, BN_CTX *ctx)
+ssl.EC_POINT_mul.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+                             ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]
+ssl.EC_POINT_mul.restype = ctypes.c_int
+
+# ec/ec.h                 void EC_KEY_free(EC_KEY *key)
+ssl.EC_KEY_free.argtypes = [ctypes.c_void_p]
+# void
 
 class KEY:
 
@@ -86,32 +178,9 @@ class KEY:
             form = self.POINT_CONVERSION_UNCOMPRESSED
         ssl.EC_KEY_set_conv_form(self.k, form)
 
+
     def get_secret(self):
         bn = ssl.EC_KEY_get0_private_key(self.k)
         mb = ctypes.create_string_buffer(32)
         ssl.BN_bn2bin(bn, mb)
         return mb.raw
-
-if __name__ == '__main__':
-    # ethalone keys
-    ec_secret = '' + \
-        'a0dc65ffca799873cbea0ac274015b9526505daaaed385155425f7337704883e'
-    ec_private = '308201130201010420' + \
-        'a0dc65ffca799873cbea0ac274015b9526505daaaed385155425f7337704883e' + \
-        'a081a53081a2020101302c06072a8648ce3d0101022100' + \
-        'fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f' + \
-        '300604010004010704410479be667ef9dcbbac55a06295ce870b07029bfcdb2d' + \
-        'ce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a6' + \
-        '8554199c47d08ffb10d4b8022100' + \
-        'fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141' + \
-        '020101a14403420004' + \
-        '0791dc70b75aa995213244ad3f4886d74d61ccd3ef658243fcad14c9ccee2b0a' + \
-        'a762fbc6ac0921b8f17025bb8458b92794ae87a133894d70d7995fc0b6b5ab90'
-
-    k = KEY()
-    k.generate (ec_secret.decode('hex'))
-    k.set_compressed(True)
-    print k.get_privkey ().encode('hex')
-    print k.get_pubkey().encode('hex')
-    print k.get_secret().encode('hex')
-

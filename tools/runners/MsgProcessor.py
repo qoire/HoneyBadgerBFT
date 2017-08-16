@@ -164,18 +164,18 @@ class MsgProcessor():
             msg = server.recv()
             obj = json.loads(msg)
 
-            if (obj['msg_type'] == 'DISCONNECT'):
+            if (obj['@type'] == 'disconnect_msg'):
                 # we're being disconnected, send poison pill to client and disconnect
                 self.q.put(PoisonPill())
                 break
-            elif (obj['msg_type'] == 'TX'):
+            elif (obj['@type'] == 'tx_msg'):
                 tx_hash = obj['tx_hash'] # expected 32-byte hash
 
                 # only send message if we've already hooked up the outbound connection
                 if not self.out == None:
                     self.out(tx_hash)
 
-            elif (obj['msg_type'] == 'STEP'):
+            elif (obj['@type'] == 'step_msg'):
                 steps = obj['steps']
 
                 if not self.handle_steps_fn == None:

@@ -39,7 +39,7 @@ def simple_router(N, maxdelay=0.005, seed=None):
             [makeRecv(j) for j in range(N)])
 
 
-def _setup_badgers(N=4, f=1, seed=None):
+def _setup_badgers(N=4, f=1, seed=None, steps = -1):
     """
     Setups up badgers in a fake network with queue based network.
     Also, new keys are generated time the network is booted up, but
@@ -71,6 +71,7 @@ def _setup_badgers(N=4, f=1, seed=None):
         badgers[i] = HoneyBadgerBFT(sid, i, 1, N, f,
                                     sPK, sSKs[i], ePK, eSKs[i],
                                     sends[i], recvs[i], outbound, run_forever)
+        badgers[i].maxsteps(steps)
         threads[i] = gevent.spawn(badgers[i].run)
 
     return threads, badgers
@@ -133,8 +134,8 @@ def _test_honeybadger_no_tx(N=4, f=1, seed=None):
         gevent.killall(threads)
         raise
 
-def _test_honeybadger_no_fault(N=4, f=1, seed=None):
-    threads, badgers = _setup_badgers(N, f)
+def _test_honeybadger_yielding(N=4, f=1, seed=None):
+    threads, badgers = _setup_badgers(N, f, steps=0)
     try:
         outs = [threads[i].get() for i in range(N)]
 
@@ -152,7 +153,7 @@ def test_honeybadger():
     # _test_honeybadger()
     # _test_honeybadger_single_tx()
     # _test_honeybadger_no_tx()
-    _test_honeybadger_no_fault()
+    _test_honeybadger_yielding()
 
 # if we want to run it in pycharm instead
 if __name__ == '__main__':

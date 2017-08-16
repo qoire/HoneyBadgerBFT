@@ -40,6 +40,7 @@ class HoneyBadgerBFT():
         self._send = send
         self._recv = recv
         self.run_forever = run_forever
+        self.step = -1
 
         # ob is a function that passes the block to an outbound
         self.ob = ob
@@ -53,6 +54,15 @@ class HoneyBadgerBFT():
     def submit_tx(self, tx):
         print 'submit_tx', self.pid, tx
         self.transaction_buffer.append(tx)
+
+    def maxsteps(self, steps):
+        """
+        Sets the amount of steps the consensus is able to run
+        by "steps" we mean the amount of rounds
+        :param steps:
+        :return:
+        """
+        self.step = steps
 
     def run(self):
         def _recv():
@@ -76,6 +86,14 @@ class HoneyBadgerBFT():
         self._recv_thread = gevent.spawn(_recv)
 
         while True:
+            # first check if we can still operate, otherwise just loop
+            if self.step != -1 and self.step <= 0:
+                print("pid {}, yielding because no steps".format(self.pid))
+                gevent.sleep(0.1) # yield and sleep
+                continue
+
+            print("pid {}, starting next round, currently at {} steps".format(self.pid, self.step))
+
             # For each round...
             r = self.round
             if r not in self._per_round_recv:
@@ -109,6 +127,9 @@ class HoneyBadgerBFT():
             self.transaction_buffer = [_tx for _tx in self.transaction_buffer if _tx not in new_tx]
 
             self.round += 1 # Increment the round
+
+            if (self.step != -1):
+                self.step = self.step - 1
 
             if not self.run_forever:
                 if self.round >= 3: break # Only run one round for now

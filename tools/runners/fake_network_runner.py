@@ -115,7 +115,14 @@ def setup_network(n):
             print("shutdown complete")
         gevent.spawn(_sd).start()
 
+    def steps(i):
+        def _steps(i):
+            for thread in t:
+                thread.maxsteps(i)
+        gevent.spawn(_steps).start()
+
     proc.hookup_shutdown(sd)
+    proc.hookup_steps(steps)
 
     try:
         proc.block()

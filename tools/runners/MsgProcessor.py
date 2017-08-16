@@ -70,6 +70,7 @@ class MsgProcessor():
         self.out = None
         self.t = None
         self.shutdown_fn = None
+        self.handle_steps_fn = None
 
 
     def run(self):
@@ -174,6 +175,12 @@ class MsgProcessor():
                 if not self.out == None:
                     self.out(tx_hash)
 
+            elif (obj['msg_type'] == 'STEP'):
+                steps = obj['steps']
+
+                if not self.handle_steps_fn == None:
+                    self.handle_steps_fn(steps)
+
         print("MsgProcessor: server shutdown")
 
     def hookup(self, out):
@@ -191,6 +198,15 @@ class MsgProcessor():
         :return:
         """
         self.shutdown_fn = shutdown_fn
+
+    def hookup_steps(self, steps_fn):
+        """
+        This function is called when we receive a message to update the steps
+        for each honeybadger, how this is done is left up to the implementation
+        :param steps_fn:
+        :return:
+        """
+        self.handle_steps_fn = steps_fn
 
     def send_block(self, tx_list, binary=False):
         if binary:
@@ -214,6 +230,7 @@ class MsgProcessor():
         if self.client_sock != None:
             self.client_sock.close()
 
+        # TODO: why does this hang!
         #if self.context != None:
         #    self.context.term()
 

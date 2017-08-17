@@ -88,7 +88,6 @@ class HoneyBadgerBFT():
         while True:
             # first check if we can still operate, otherwise just loop
             if self.step != -1 and self.step <= 0:
-                print("pid {}, yielding because no steps".format(self.pid))
                 gevent.sleep(0.1) # yield and sleep
                 continue
 

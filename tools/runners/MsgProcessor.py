@@ -99,8 +99,8 @@ class MsgProcessor():
         def _client():
             print("MsgProcessor: client running")
             socket = self.context.socket(zmq.PAIR)
-            socket.connect("tcp://localhost:%s" % self.conn[1])
-            print("MsgProcessor: client -> connection established")
+            socket.connect("tcp://127.0.0.1:%s" % self.conn[1])
+            print("MsgProcessor: client -> connection established tcp://localhost:{}".format(self.conn[1]))
             return socket
 
 
@@ -108,14 +108,15 @@ class MsgProcessor():
         g_c = Greenlet.spawn(_client)
         ret = gevent.joinall([g_s, g_c])
         client_sock = ret[1].value
+        serv_sock = ret[0].value
 
         # lets also bind to class
         self.server_sock = ret[0].value # type: zmq.socket
         self.client_sock = ret[1].value # type: zmq.socket
 
         # now all connections are established, run the routines
-        print("MsgProcessor: connection, established, sending counterparty information")
-        client_sock.send(json.dumps({'@type': 'connect_msg', 'host': '127.0.0.1', 'port': 30303}))
+        print("MsgProcessor: connection established, sending information")
+        client_sock.send_string(json.dumps({'@type': 'connect_msg', 'host': '127.0.0.1', 'port': 30303}))
 
         self.server_t = Greenlet(self._client)
         self.client_t = Greenlet(self._server)
@@ -129,7 +130,6 @@ class MsgProcessor():
         Client routine, defines an inbound queue (from our perspective),
         the only message that we support currently is BLK
         '''
-
         client = self.client_sock
 
         if client == None:
@@ -144,7 +144,7 @@ class MsgProcessor():
                 break
 
             # expecting a dictionary here thats serializable
-            client.send(json.dumps(msg))
+            client.send_string(json.dumps(msg))
 
         print("MsgProcessor: client shutdown")
 
@@ -176,6 +176,7 @@ class MsgProcessor():
                     self.out(tx_hash)
 
             elif (obj['@type'] == 'step_msg'):
+                print("handling step message")
                 steps = obj['steps']
 
                 if not self.handle_steps_fn == None:

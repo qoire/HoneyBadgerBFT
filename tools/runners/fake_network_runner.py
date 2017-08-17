@@ -27,7 +27,7 @@ def tx_input_router(badgers):
 
     def _send(tx):
         r = rnd.randint(0, len(badgers)-1)
-        badgers[r].submit(tx)
+        badgers[r].submit_tx(tx)
 
     return _send
 
@@ -62,7 +62,7 @@ def simple_router(N, maxdelay=0.005, seed=None):
     return ([makeSend(i) for i in range(N)],
             [makeRecv(j) for j in range(N)])
 
-def _setup_badgers(N=4, f=1, seed=None):
+def _setup_badgers(N=4, f=1, seed=None, steps=-1):
     sid = 'mt1'
     # Generate threshold sig keys
     sPK, sSKs = dealer(N, f + 1, seed=seed)
@@ -86,6 +86,7 @@ def _setup_badgers(N=4, f=1, seed=None):
         badgers[i] = HoneyBadgerBFT(sid, i, 1, N, f,
                                     sPK, sSKs[i], ePK, eSKs[i],
                                     sends[i], recvs[i], route_to_msgproc, True)
+        badgers[i].maxsteps(steps)
         threads[i] = gevent.spawn(badgers[i].run)
     return threads, badgers
 
@@ -102,7 +103,7 @@ def _hookup_msg_processor(proc, b):
 
 def setup_network(n):
     # deal threshold signatures
-    t, b = _setup_badgers(4, 1, 0)
+    t, b = _setup_badgers(N=4, f=1, seed=0, steps=0)
     proc = MsgProcessor()
     _hookup_msg_processor(proc, b)
     proc.run()
@@ -113,13 +114,15 @@ def setup_network(n):
             gevent.killall(t)
             proc.stop()
             print("shutdown complete")
-        gevent.spawn(_sd).start()
+        gevent.spawn(_sd)
 
     def steps(i):
+        print("steps called")
         def _steps(i):
-            for thread in t:
-                thread.maxsteps(i)
-        gevent.spawn(_steps).start()
+            print("FakeNetworkRunner: updating steps")
+            for badger in b:
+                badger.maxsteps(i)
+        gevent.spawn(_steps, i)
 
     proc.hookup_shutdown(sd)
     proc.hookup_steps(steps)
